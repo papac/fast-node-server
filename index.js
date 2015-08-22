@@ -89,11 +89,26 @@ var Route = function(path, cb) {
 	};
 	this.match = function(pathname) {
 		var path = this.path.replace(/:([\w_]+)/g, "([^/])");
+		path = "^" + path + "$";
+		/*
+		* Regex de validation
+		*/
 		var regex = new RegExp(path);
-		if (!regex.test(pathname)) {
-			return false;
+		/*
+		* Definition de la route /
+		*/
+		if (this.path == '') {
+			this.path = "\/";
 		}
-		return true;
+		/*
+		* Teste de validation du pathname
+		* 
+		* console.log("'" + this.path + "'", "=" ,pathname, "=>" ,regex.test(pathname));
+		*/
+		if (regex.test(pathname)) {
+			return true;
+		}
+		return false;
 	};
 };
 
@@ -119,14 +134,15 @@ module.exports = function Router() {
 	*/
 	var run = function(req, res, pathname) {
 		var method = req.method.toLowerCase();
+		var match = false;
 		pathname = pathname.substring(1).replace("/", "\/");
 		methods[method].forEach(function(item) {
 			if (item.match(pathname)) {
+				match = true;
 				return item.run(req, res);
-			} else {
-				res.send("<h3>Cannot " + method + "/</h3>");
 			}
 		});
+		return match;
 	};
 	/*
 	* Controlleur des routes
@@ -198,13 +214,20 @@ module.exports = function Router() {
 				/*
 				* Comparation de la route courante dans ma collection de route.
 				*/
-				run(req, respone, pathname);
+				var isMath = run(req, respone, pathname);
+
+				/*
+				* Verification de la validite du path
+				*/
+				if (!isMath) {
+					res.end('<p style="font-size: 15px; font-family: verdana">Cannot ' + req.method + ' ' + pathname + '</p>')
+				}
 			});
 			/*
 			* Error handler.
 			*/
 			server.on("error", function(err) {
-				console.log("Error more information: ", err);
+				console.log("[Error: more information]: ", err);
 				process.exit();
 			});
 			if (typeof hostname === "function") {
