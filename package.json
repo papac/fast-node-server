@@ -1,0 +1,27 @@
+{
+  "name": "node-server",
+  "version": "0.0.1",
+  "description": "Simple http server, manger routing",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node test/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/papac/node-server.git"
+  },
+  "keywords": [
+    "\"Server\"",
+    "\"http\"",
+    "\"node-server\""
+  ],
+  "author": "Franck Dakia",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/papac/node-server/issues"
+  },
+  "homepage": "https://github.com/papac/node-server#readme"
+}
