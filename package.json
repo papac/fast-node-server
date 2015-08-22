@@ -1,7 +1,7 @@
 {
   "name": "node-server",
   "version": "0.0.1",
-  "description": "Simple http server and routing manager",
+  "description": "Very minimalyste web framework",
   "main": "index.js",
   "directories": {
     "test": "test"
@@ -11,17 +11,24 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/papac/node-server.git"
+    "url": "git+ssh://git@github.com/papac/node-http-server.git"
   },
   "keywords": [
     "\"Server\"",
     "\"http\"",
-    "\"node-server\""
+    "\"node-http-server\"",
+    "\"express\"",
   ],
   "author": "Franck Dakia",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/papac/node-server/issues"
+    "url": "https://github.com/papac/node-http-server/issues"
   },
-  "homepage": "https://github.com/papac/node-server#readme"
+  "homepage": "https://github.com/papac/node-http-server#readme",
+  "devDependencies": {
+    "serve-favicon": "^2.3.0",
+    "body-parser": "^1.13.3",
+    "morgan": "^1.6.1",
+    "serve-static": "^1.10.0",
+  }
 }
