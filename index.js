@@ -1,4 +1,23 @@
 /**
+* Class request
+*
+* Permetant de reconstruire la requete
+* 
+*/
+var Request = function (req, pathname) {
+	var method = req.method.toLowerCase();
+	if (method == "post") {
+		req.on("readable", function(data) {
+			req.body = JSON.parse(data.toString());
+		});
+	} else if (method == "get") {
+		if (/(:.+)/g.test(pathname)) {
+			console.log(RegExp.$1);
+		}
+	}
+};
+
+/**
 * Class response
 *
 * Permetant de reconstruire la response
