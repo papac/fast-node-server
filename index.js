@@ -1,5 +1,44 @@
-'use strict';
-var nodeHttpServer = function() {
+/**
+* Class response
+*
+* Permetant de reconstruire la response
+* 
+*/
+var Response = function (res) {
+
+	// setHeader function
+	this.setHeader = function(name, value) {
+		res.setHeader(name, value);
+	};
+
+	// writeHead function
+	this.writeHead = function(code, satutsMessage, header) {
+		if (typeof satutsMessage === "object" || Array.isArray(statusMessage)) {
+			headers = satutsMessage;
+			res.writeHead(code, headers);
+		} else {
+			if (typeof satutsMessage !== "object" || Array.isArray(statusCode))
+		}
+	};
+
+	// send function
+	this.send = function(data, encoding) {
+		if (typeof encoding !== "object") {
+			encoding = {encoded: "utf-8"};
+		}
+		res.write(data, encoding);
+		res.end();
+	};
+
+	// status information
+	this.statusCode = res.statusCode;
+	this.statusMessage = res.statusMessage;
+};
+
+module.exports = function() {
+	
+	'use strict';
+
 	var url = require("url");
 	/*
 	* Objet de collection des differents method
@@ -15,8 +54,12 @@ var nodeHttpServer = function() {
 			cb: []
 		}
 	};
+
 	// Controlleur des routes
 	return {
+		use: function (middleware) {
+			return this;
+		},
 		get: function(path, callback) {
 			methods.get.path.push(path);
 			methods.get.cb.push(callback);
@@ -29,8 +72,7 @@ var nodeHttpServer = function() {
 		},
 		listen: function(port, hostname, callback) {
 			var http = require("http");
-			var server = http.createServer(function(req, res) {
-				res.writeHead(200, {"Content-Type":"text/html"});
+			var server = http.createServer(function(req, res) {	
 				/*
 				* Recuperation de la methode de transmission
 				* de la requete
@@ -49,7 +91,7 @@ var nodeHttpServer = function() {
 					method.path.forEach(function(item, index) {
 						if (item == requestPath) {
 							if (typeof method.cb[index] !== "undefined") {
-								method.cb[index](req, res);
+								method.cb[index](req, respone);
 							} else {
 								res.end();
 							}
@@ -60,13 +102,24 @@ var nodeHttpServer = function() {
 					res.write('<h1>Not found page 404</h1>');
 				}
 			});
+
+			// error handler
 			server.on("error", function(err) {
-				console.log(err);
+				console.log("Error more information: ", err);
 				process.exit();
 			});
-			server.listen(parseInt(port, 10));
+
+			if (typeof hostname !== "function") {
+				callback = hostname;
+			} else {
+				hostname = "localhost";
+				if (typeof callback !== "undefined") {
+					callback = function(){};
+				}
+			}
+
+			// Launch
+			server.listen(parseInt(port, 10), hostname, callback);
 		}
 	};
 };
-
-exports = nodeHttpServer;
