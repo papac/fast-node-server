@@ -1,20 +1,34 @@
+var util = {
+	pathFilter: function(arr, fn) {
+		if (Array.isArray(arr)) {
+			for(var i = 0, len = arr.length; i < len; i++) {
+				if (fn(arr(i))) {
+					exist = true;
+				}
+			}
+		}
+	}
+}
 /**
 * Class request
 *
 * Permetant de reconstruire la requete
 * 
 */
-var Request = function (req, pathname) {
+var request = function (req, pathname) {
 	var method = req.method.toLowerCase();
+	console.log(method);
 	if (method == "post") {
 		req.on("readable", function(data) {
 			req.body = JSON.parse(data.toString());
 		});
 	} else if (method == "get") {
-		if (/(:.+)/g.test(pathname)) {
+		console.log(pathname);
+		if (/:([\w_-]+)/g.test(pathname)) {
 			console.log(RegExp.$1);
 		}
 	}
+	return req;
 };
 
 /**
@@ -31,12 +45,21 @@ var Response = function (res) {
 	};
 
 	// writeHead function
-	this.writeHead = function(code, satutsMessage, header) {
-		if (typeof satutsMessage === "object" || Array.isArray(statusMessage)) {
-			headers = satutsMessage;
+	this.writeHead = function(code, statusMessage, header) {
+		if (typeof statusMessage === "object" || Array.isArray(statusMessage)) {
+			headers = statusMessage;
 			res.writeHead(code, headers);
 		} else {
-			if (typeof satutsMessage !== "object" || Array.isArray(statusCode))
+			if (typeof statusMessage === "string") {
+				if (!(typeof headers === "object" || Array.isArray(headers))) {
+					headers = {
+						"Content-Type": "text/html"
+					};
+				}
+				res.writeHead(code, statusMessage, headers);
+			} else {
+				res.writeHead(code, headers);
+			}
 		}
 	};
 
@@ -45,7 +68,10 @@ var Response = function (res) {
 		if (typeof encoding !== "object") {
 			encoding = {encoded: "utf-8"};
 		}
-		res.write(data, encoding);
+
+		if (typeof data !== "string") {
+			res.write(data, encoding);
+		}
 		res.end();
 	};
 
@@ -92,6 +118,11 @@ module.exports = function() {
 		listen: function(port, hostname, callback) {
 			var http = require("http");
 			var server = http.createServer(function(req, res) {	
+				console.log(req.url);
+				// default header
+				res.writeHead(200, {"Content-Type": "text/html"});
+				var respone = new Response(res);
+
 				/*
 				* Recuperation de la methode de transmission
 				* de la requete
@@ -106,20 +137,24 @@ module.exports = function() {
 				/*
 				* Lancement du control de path
 				*/
-				if (typeof method.path[0] !== "undefined") {
-					method.path.forEach(function(item, index) {
+				var exist = false;
+				method.path.forEach(function(item, index) {
+					// comparation de la route courante dans ma collection de route
+					if (item === requestPath) {
+						exist = true;
+					}
+					if (exist) {
 						if (item == requestPath) {
 							if (typeof method.cb[index] !== "undefined") {
-								method.cb[index](req, respone);
+								method.cb[index](request(req, requestPath), respone);
 							} else {
 								res.end();
 							}
 						}
-					});
-				} else {
-					// Erreur 404
-					res.write('<h1>Not found page 404</h1>');
-				}
+					} else {
+						res.end('<h1>Not found page 404</h1>');
+					}
+				});
 			});
 
 			// error handler
