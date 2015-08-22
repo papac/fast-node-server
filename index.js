@@ -62,6 +62,17 @@ module.exports = function Router() {
 	* Controlleur des routes
 	*/
 	return {
+		/*
+		* sequenseur de midelware.
+		*/
+		_nextedInit: false,
+		_nexted: false,
+		next: function() {
+			this._nexted = true;
+		},
+		/*
+		* Server de fichier static
+		*/
 		static: serveStatic,
 		/*
 		* mutateur des donnees de configuration
@@ -82,12 +93,29 @@ module.exports = function Router() {
 		* Gestion de plugin.
 		*/
 		use: function (mount, middleware) {
-
+			var me = this;
+			/*
+			* next middelware launcher
+			*/
+			var next = function() {
+				me._nexted = true; 
+			};
 			if (typeof mount === "function") {
 				middleware = mount;
 				mount = '';
 			}
-			middleware();
+			/*
+			* coeur de this.use
+			*/
+			if (!this._nextedInit) {
+				this._nextedInit = true;
+				this._nexted = false;
+				middleware(next);
+			} else {
+				if (this._nexted) {
+					middleware(next);
+				}
+			}
 			return this;
 		},
 		/*
