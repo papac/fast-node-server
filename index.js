@@ -1,3 +1,5 @@
+var url = require("url");
+var querystring = require("querystring");
 /**
 * Class request
 *
@@ -11,9 +13,11 @@ var request = function (req, pathname) {
 			req.body = JSON.parse(data.toString());
 		});
 	} else if (method == "get") {
-		console.log(pathname);
-		if (/:([\w_-]+)/g.test(pathname)) {
-			console.log(RegExp.$1);
+		if (/(:([\w_-]+))+/g.test(pathname)) {
+			req.params = {
+			};
+		}else {
+			req.query = querystring.parse(pathname);
 		}
 	}
 	return req;
@@ -56,9 +60,7 @@ var Response = function (res) {
 		if (typeof encoding !== "object") {
 			encoding = {encoded: "utf-8"};
 		}
-		if (typeof data !== "string") {
-			res.write(data, encoding);
-		}
+		res.write(data, encoding);
 		res.end();
 	};
 
@@ -70,8 +72,6 @@ var Response = function (res) {
 module.exports = function() {
 	
 	'use strict';
-
-	var url = require("url");
 	/*
 	* Objet de collection des differents method
 	* http en occurence GET, POST
@@ -122,8 +122,9 @@ module.exports = function() {
 					
 				// comparation de la route courante dans ma collection de route
 				if (requestPath in method.path) {
-					if (typeof method.cb[requestPath] !== "undefined") {
-						method.cb[requestPath](request(req, requestPath), respone);
+					if (typeof method.cb[requestPath] === "function") {
+						var fn = method.cb[requestPath];
+						fn(request(req, requestPath), respone);
 					} else {
 						res.end();
 					}
