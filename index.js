@@ -1,9 +1,9 @@
 var url = require("url");
 var querystring = require("querystring");
 /**
-* Class request
+* Class request.
 *
-* Permetant de reconstruire la requete
+* Permetant de reconstruire la requete.
 * 
 */
 var request = function (req, pathname) {
@@ -23,19 +23,23 @@ var request = function (req, pathname) {
 	return req;
 };
 /**
-* Class response
+* Class response.
 *
-* Permetant de reconstruire la response
+* Permetant de reconstruire la response.
 * 
 */
 var Response = function (res) {
 
-	// setHeader function
+	/*
+	* SetHeader function.
+	*/
 	this.setHeader = function(name, value) {
 		res.setHeader(name, value);
 	};
 
-	// writeHead function
+	/*
+	* WriteHead function.
+	*/
 	this.writeHead = function(code, statusMessage, header) {
 		if (typeof statusMessage === "object" || Array.isArray(statusMessage)) {
 			headers = statusMessage;
@@ -54,7 +58,9 @@ var Response = function (res) {
 		}
 	};
 
-	// send function
+	/*
+	* Send function.
+	*/
 	this.send = function(data, encoding) {
 		if (typeof encoding !== "object") {
 			encoding = {encoded: "utf-8"};
@@ -63,11 +69,15 @@ var Response = function (res) {
 		res.end();
 	};
 
-	// Lanceur d'execution de temple
+	/*
+	* Lanceur d'execution de temple.
+	*/
 	this.render = function(renderFile, data) {
 	};
 
-	// status information
+	/*
+	* Status information.
+	*/
 	this.statusCode = res.statusCode;
 	this.statusMessage = res.statusMessage;
 };
@@ -83,40 +93,56 @@ module.exports = function() {
 		get: { path: [], cb: [] },
 		post: { path: [], cb: [] }
 	};
-	// Controlleur des routes
+	/*
+	* Controlleur des routes
+	*/
 	return {
-		// mutateur des donnees de configuration
+		/*
+		* mutateur des donnees de configuration
+		*/
 		set: function(name, value) {
 			config[name] = value;
 		},
-		// Accesseur des donnees de la configuration
+		/*
+		* Accesseur des donnees de la configuration
+		*/
 		get: function (name) {
 			if (! name in config) {
 				return null;
 			}
 			return config[name];
 		},
-		// Gestion de plugin
+		/*
+		* Gestion de plugin.
+		*/
 		use: function (middleware) {
 			return this;
 		},
-		// Route get
+		/*
+		* Route get.
+		*/
 		get: function(path, callback) {
 			methods.get.path[path] = path;
 			methods.get.cb[path] = callback;
 			return this;
 		},
-		// Route post
+		/*
+		* Route post.
+		*/
 		post: function(path, callback) {
 			methods.post.path[path] = path;
 			methods.post.cb[path] = callback;
 			return this;
 		},
-		// Lanceur du serveur.
+		/*
+		* Lanceur du serveur.
+		*/
 		listen: function(port, hostname, callback) {
 			var http = require("http");
 			var server = http.createServer(function(req, res) {	
-				// default header
+				/*
+				* default header.
+				*/
 				res.writeHead(200, {"Content-Type": "text/html"});
 				var respone = new Response(res);
 				/*
@@ -132,7 +158,9 @@ module.exports = function() {
 				* Lancement du control de path
 				*/
 				var exist = false;
-				// comparation de la route courante dans ma collection de route
+				/*
+				* Comparation de la route courante dans ma collection de route.
+				*/
 				if (requestPath in method.path) {
 					if (typeof method.cb[requestPath] === "function") {
 						var fn = method.cb[requestPath];
@@ -144,7 +172,9 @@ module.exports = function() {
 					res.end('<h1>Not found page 404</h1>');
 				}
 			});
-			// error handler
+			/*
+			* Error handler.
+			*/
 			server.on("error", function(err) {
 				console.log("Error more information: ", err);
 				process.exit();
@@ -157,7 +187,9 @@ module.exports = function() {
 					callback = function(){};
 				}
 			}
-			// Launch
+			/*
+			* Launcher
+			*/
 			server.listen(parseInt(port, 10), hostname, callback);
 		}
 	};
