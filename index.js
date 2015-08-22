@@ -1,14 +1,3 @@
-var util = {
-	pathFilter: function(arr, fn) {
-		if (Array.isArray(arr)) {
-			for(var i = 0, len = arr.length; i < len; i++) {
-				if (fn(arr(i))) {
-					exist = true;
-				}
-			}
-		}
-	}
-}
 /**
 * Class request
 *
@@ -17,7 +6,6 @@ var util = {
 */
 var request = function (req, pathname) {
 	var method = req.method.toLowerCase();
-	console.log(method);
 	if (method == "post") {
 		req.on("readable", function(data) {
 			req.body = JSON.parse(data.toString());
@@ -68,7 +56,6 @@ var Response = function (res) {
 		if (typeof encoding !== "object") {
 			encoding = {encoded: "utf-8"};
 		}
-
 		if (typeof data !== "string") {
 			res.write(data, encoding);
 		}
@@ -90,14 +77,8 @@ module.exports = function() {
 	* http en occurence GET, POST
 	*/
 	var methods = {
-		get: {
-			path: [],
-			cb: []
-		},
-		post: {
-			path: [],
-			cb: []
-		}
+		get: { path: [], cb: [] },
+		post: { path: [], cb: [] }
 	};
 
 	// Controlleur des routes
@@ -106,19 +87,19 @@ module.exports = function() {
 			return this;
 		},
 		get: function(path, callback) {
-			methods.get.path.push(path);
-			methods.get.cb.push(callback);
+			methods.get.path[path] = path;
+			methods.get.cb[path] = callback;
 			return this;
 		},
 		post: function(path, callback) {
-			methods.post.path.push(path);
-			methods.post.cb.push(callback);
+			methods.post.path[path] = path;
+			methods.post.cb[path] = callback;
 			return this;
 		},
 		listen: function(port, hostname, callback) {
 			var http = require("http");
 			var server = http.createServer(function(req, res) {	
-				console.log(req.url);
+
 				// default header
 				res.writeHead(200, {"Content-Type": "text/html"});
 				var respone = new Response(res);
@@ -138,23 +119,17 @@ module.exports = function() {
 				* Lancement du control de path
 				*/
 				var exist = false;
-				method.path.forEach(function(item, index) {
-					// comparation de la route courante dans ma collection de route
-					if (item === requestPath) {
-						exist = true;
-					}
-					if (exist) {
-						if (item == requestPath) {
-							if (typeof method.cb[index] !== "undefined") {
-								method.cb[index](request(req, requestPath), respone);
-							} else {
-								res.end();
-							}
-						}
+					
+				// comparation de la route courante dans ma collection de route
+				if (requestPath in method.path) {
+					if (typeof method.cb[requestPath] !== "undefined") {
+						method.cb[requestPath](request(req, requestPath), respone);
 					} else {
-						res.end('<h1>Not found page 404</h1>');
+						res.end();
 					}
-				});
+				} else {
+					res.end('<h1>Not found page 404</h1>');
+				}
 			});
 
 			// error handler
@@ -163,7 +138,7 @@ module.exports = function() {
 				process.exit();
 			});
 
-			if (typeof hostname !== "function") {
+			if (typeof hostname === "function") {
 				callback = hostname;
 			} else {
 				hostname = "localhost";
@@ -171,7 +146,6 @@ module.exports = function() {
 					callback = function(){};
 				}
 			}
-
 			// Launch
 			server.listen(parseInt(port, 10), hostname, callback);
 		}
