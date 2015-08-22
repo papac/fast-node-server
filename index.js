@@ -47,9 +47,7 @@ var Response = function (res) {
 		} else {
 			if (typeof statusMessage === "string") {
 				if (!(typeof headers === "object" || Array.isArray(headers))) {
-					headers = {
-						"Content-Type": "text/html"
-					};
+					headers = { "Content-Type": "text/html" };
 				}
 				res.writeHead(code, statusMessage, headers);
 			} else {
@@ -65,8 +63,7 @@ var Response = function (res) {
 		if (typeof encoding !== "object") {
 			encoding = {encoded: "utf-8"};
 		}
-		res.write(data, encoding);
-		res.end();
+		res.end(data, encoding);
 	};
 
 	/*
@@ -81,8 +78,32 @@ var Response = function (res) {
 	this.statusCode = res.statusCode;
 	this.statusMessage = res.statusMessage;
 };
+/*
+* Class route
+*/
+var Route = function(path, cb) {
+	this.path = path.substring(1);
+	this.cb = cb;
+	this.run = function(request, response) {
+		return this.cb(request, response);
+	};
+	this.match = function(pathname) {
+		var path = this.path.replace(/:([\w_]+)/g, "([^/])");
+		var regex = new RegExp(path);
+		if (!regex.test(pathname)) {
+			return false;
+		}
+		return true;
+	};
+};
 
-module.exports = function() {
+/*
+* Gestionnaire d'execption.
+*/
+var RouterException = {};
+RouterException.prototype = Error.prototype;
+
+module.exports = function Router() {
 	var config = [];
 	'use strict';
 	/*
@@ -90,8 +111,22 @@ module.exports = function() {
 	* http en occurence GET, POST
 	*/
 	var methods = {
-		get: { path: [], cb: [] },
-		post: { path: [], cb: [] }
+		get: [],
+		post: []
+	};
+	/*
+	* lancement du serveur.
+	*/
+	var run = function(req, res, pathname) {
+		var method = req.method.toLowerCase();
+		pathname = pathname.substring(1).replace("/", "\/");
+		methods[method].forEach(function(item) {
+			if (item.match(pathname)) {
+				return item.run(req, res);
+			} else {
+				res.send("<h3>Cannot " + method + "/</h3>");
+			}
+		});
 	};
 	/*
 	* Controlleur des routes
@@ -122,16 +157,14 @@ module.exports = function() {
 		* Route get.
 		*/
 		get: function(path, callback) {
-			methods.get.path[path] = path;
-			methods.get.cb[path] = callback;
+			methods.get.push(new Route(path, callback));
 			return this;
 		},
 		/*
 		* Route post.
 		*/
 		post: function(path, callback) {
-			methods.post.path[path] = path;
-			methods.post.cb[path] = callback;
+			methods.post.push(new Route(path, callback));
 			return this;
 		},
 		/*
@@ -143,6 +176,10 @@ module.exports = function() {
 				/*
 				* default header.
 				*/
+				res.on("error", function(er) {
+					console.log(er);
+					return;
+				})
 				res.writeHead(200, {"Content-Type": "text/html"});
 				var respone = new Response(res);
 				/*
@@ -153,7 +190,7 @@ module.exports = function() {
 				/*
 				* Recuperation du path de la requete
 				*/
-				var requestPath = url.parse(req.url).pathname;
+				var pathname = url.parse(req.url).pathname;
 				/*
 				* Lancement du control de path
 				*/
@@ -161,16 +198,7 @@ module.exports = function() {
 				/*
 				* Comparation de la route courante dans ma collection de route.
 				*/
-				if (requestPath in method.path) {
-					if (typeof method.cb[requestPath] === "function") {
-						var fn = method.cb[requestPath];
-						fn(request(req, requestPath), respone);
-					} else {
-						res.end();
-					}
-				} else {
-					res.end('<h1>Not found page 404</h1>');
-				}
+				run(req, respone, pathname);
 			});
 			/*
 			* Error handler.
