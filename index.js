@@ -3,6 +3,7 @@ var querystring = require("querystring");
 var Response = require("./lib/response");
 var Route = require("./lib/route");
 var serveStatic = require("./lib/serve-static");
+var header = require("./lib/header");
 /**
 * Class request.
 *
@@ -50,6 +51,9 @@ module.exports = function Router() {
 		get: [],
 		post: []
 	};
+
+	var events = require("events").EventEmitter;
+	var connection = new events();
 	/*
 	* lancement du serveur.
 	*/
@@ -100,29 +104,31 @@ module.exports = function Router() {
 		* Gestion de plugin.
 		*/
 		use: function (mount, middleware) {
-			var me = this;
-			/*
-			* next middelware launcher
-			*/
-			var next = function() {
-				me._nexted = true; 
-			};
-			if (typeof mount === "function") {
-				middleware = mount;
-				mount = '';
-			}
-			/*
-			* coeur de this.use
-			*/
-			if (!this._nextedInit) {
-				this._nextedInit = true;
-				this._nexted = false;
-				middleware(next);
-			} else {
-				if (this._nexted) {
-					middleware(next);
+			connection.on("start", function(req, res) {
+				var me = this;
+				/*
+				* next middelware launcher
+				*/
+				var next = function() {
+					me._nexted = true; 
+				};
+				if (typeof mount === "function") {
+					middleware = mount;
+					mount = '';
 				}
-			}
+				/*
+				* coeur de this.use
+				*/
+				if (!this._nextedInit) {
+					this._nextedInit = true;
+					this._nexted = false;
+					middleware(req, res, next);
+				} else {
+					if (this._nexted) {
+						middleware(req, res, next);
+					}
+				}
+			});
 			return this;
 		},
 		/*
@@ -144,15 +150,22 @@ module.exports = function Router() {
 		*/
 		listen: function(port, hostname, callback) {
 			var http = require("http");
-			var server = http.createServer(function(req, res) {	
+			var server = http.createServer(function(req, res) {
 				/*
-				* default header.
+				* information du reste de l'application du debut de serveur
+				*/
+				connection.emit("start", req, res);
+				/*
+				* Gestionnaire d'erreur sur la reponse.
 				*/
 				res.on("error", function(er) {
 					console.log(er);
 					return;
-				})
-				res.writeHead(200, {"Content-Type": "text/html"});
+				});
+				/*
+				* default header.
+				*/
+				res.writeHead(200, header("text/html"));
 				var respone = new Response(res);
 				/*
 				* Recuperation de la methode de transmission
