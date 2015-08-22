@@ -2,6 +2,7 @@ var url = require("url");
 var querystring = require("querystring");
 var Response = require("./lib/response");
 var Route = require("./lib/route");
+var serveStatic = require("./lib/serve-static");
 /**
 * Class request.
 *
@@ -61,6 +62,7 @@ module.exports = function Router() {
 	* Controlleur des routes
 	*/
 	return {
+		static: serveStatic,
 		/*
 		* mutateur des donnees de configuration
 		*/
@@ -79,7 +81,13 @@ module.exports = function Router() {
 		/*
 		* Gestion de plugin.
 		*/
-		use: function (middleware) {
+		use: function (mount, middleware) {
+
+			if (typeof mount === "function") {
+				middleware = mount;
+				mount = '';
+			}
+			middleware();
 			return this;
 		},
 		/*
