@@ -2,7 +2,8 @@ var url = require("url");
 var querystring = require("querystring");
 var Response = require("./lib/response");
 var Route = require("./lib/route");
-var serveStatic = require("./lib/serve-static");
+var serveStatic = require("serve-static");
+var bobyParser = require("body-parser");
 var header = require("./lib/header");
 /**
 * Class request.
@@ -12,13 +13,10 @@ var header = require("./lib/header");
 */
 var request = function (req, pathname) {
 	var method = req.method.toLowerCase();
-	if (method == "post") {
-		req.on("readable", function(data) {
-			req.body = JSON.parse(data.toString());
-		});
-	} else if (method == "get") {
+	if (method == "get") {
 		if (/(:([\w_-]+))+/g.test(pathname)) {
 			req.params = {
+
 			};
 		}else {
 			req.query = querystring.parse(pathname);
@@ -81,6 +79,10 @@ module.exports = function Router() {
 		next: function() {
 			this._nexted = true;
 		},
+		/*
+		* Body-parse function
+		*/
+		body: bobyParser,
 		/*
 		* Server de fichier static
 		*/
