@@ -33,7 +33,14 @@ var RouterException = {};
 RouterException.prototype = Error.prototype;
 
 module.exports = function Router() {
-	var config = [];
+	/*
+	* Object de configuration
+	*/
+	var config = {
+		engine: "ejs",
+		views: undefined,
+		title: undefined
+	};
 	'use strict';
 	/*
 	* Objet de collection des differents method
