@@ -1,7 +1,7 @@
 {
   "name": "node-server",
   "version": "0.0.1",
-  "description": "Simple http server, manger routing",
+  "description": "Simple http server and routing manager",
   "main": "index.js",
   "directories": {
     "test": "test"
