@@ -1,5 +1,7 @@
 var url = require("url");
 var querystring = require("querystring");
+var Response = require("./lib/response");
+var Route = require("./lib/route");
 /**
 * Class request.
 *
@@ -21,95 +23,6 @@ var request = function (req, pathname) {
 		}
 	}
 	return req;
-};
-/**
-* Class response.
-*
-* Permetant de reconstruire la response.
-* 
-*/
-var Response = function (res) {
-
-	/*
-	* SetHeader function.
-	*/
-	this.setHeader = function(name, value) {
-		res.setHeader(name, value);
-	};
-
-	/*
-	* WriteHead function.
-	*/
-	this.writeHead = function(code, statusMessage, header) {
-		if (typeof statusMessage === "object" || Array.isArray(statusMessage)) {
-			headers = statusMessage;
-			res.writeHead(code, headers);
-		} else {
-			if (typeof statusMessage === "string") {
-				if (!(typeof headers === "object" || Array.isArray(headers))) {
-					headers = { "Content-Type": "text/html" };
-				}
-				res.writeHead(code, statusMessage, headers);
-			} else {
-				res.writeHead(code, headers);
-			}
-		}
-	};
-
-	/*
-	* Send function.
-	*/
-	this.send = function(data, encoding) {
-		if (typeof encoding !== "object") {
-			encoding = {encoded: "utf-8"};
-		}
-		res.end(data, encoding);
-	};
-
-	/*
-	* Lanceur d'execution de temple.
-	*/
-	this.render = function(renderFile, data) {
-	};
-
-	/*
-	* Status information.
-	*/
-	this.statusCode = res.statusCode;
-	this.statusMessage = res.statusMessage;
-};
-/*
-* Class route
-*/
-var Route = function(path, cb) {
-	this.path = path.substring(1);
-	this.cb = cb;
-	this.run = function(request, response) {
-		return this.cb(request, response);
-	};
-	this.match = function(pathname) {
-		var path = this.path.replace(/:([\w_]+)/g, "([^/])");
-		path = "^" + path + "$";
-		/*
-		* Regex de validation
-		*/
-		var regex = new RegExp(path);
-		/*
-		* Definition de la route /
-		*/
-		if (this.path == '') {
-			this.path = "\/";
-		}
-		/*
-		* Teste de validation du pathname
-		* 
-		* console.log("'" + this.path + "'", "=" ,pathname, "=>" ,regex.test(pathname));
-		*/
-		if (regex.test(pathname)) {
-			return true;
-		}
-		return false;
-	};
 };
 
 /*
