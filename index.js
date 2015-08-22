@@ -22,7 +22,6 @@ var request = function (req, pathname) {
 	}
 	return req;
 };
-
 /**
 * Class response
 *
@@ -64,13 +63,17 @@ var Response = function (res) {
 		res.end();
 	};
 
+	// Lanceur d'execution de temple
+	this.render = function(renderFile, data) {
+	};
+
 	// status information
 	this.statusCode = res.statusCode;
 	this.statusMessage = res.statusMessage;
 };
 
 module.exports = function() {
-	
+	var config = [];
 	'use strict';
 	/*
 	* Objet de collection des differents method
@@ -80,46 +83,55 @@ module.exports = function() {
 		get: { path: [], cb: [] },
 		post: { path: [], cb: [] }
 	};
-
 	// Controlleur des routes
 	return {
+		// mutateur des donnees de configuration
+		set: function(name, value) {
+			config[name] = value;
+		},
+		// Accesseur des donnees de la configuration
+		get: function (name) {
+			if (! name in config) {
+				return null;
+			}
+			return config[name];
+		},
+		// Gestion de plugin
 		use: function (middleware) {
 			return this;
 		},
+		// Route get
 		get: function(path, callback) {
 			methods.get.path[path] = path;
 			methods.get.cb[path] = callback;
 			return this;
 		},
+		// Route post
 		post: function(path, callback) {
 			methods.post.path[path] = path;
 			methods.post.cb[path] = callback;
 			return this;
 		},
+		// Lanceur du serveur.
 		listen: function(port, hostname, callback) {
 			var http = require("http");
 			var server = http.createServer(function(req, res) {	
-
 				// default header
 				res.writeHead(200, {"Content-Type": "text/html"});
 				var respone = new Response(res);
-
 				/*
 				* Recuperation de la methode de transmission
 				* de la requete
 				*/
 				var method = methods[req.method.toLowerCase()];
-
 				/*
 				* Recuperation du path de la requete
 				*/
 				var requestPath = url.parse(req.url).pathname;
-
 				/*
 				* Lancement du control de path
 				*/
 				var exist = false;
-					
 				// comparation de la route courante dans ma collection de route
 				if (requestPath in method.path) {
 					if (typeof method.cb[requestPath] === "function") {
@@ -132,13 +144,11 @@ module.exports = function() {
 					res.end('<h1>Not found page 404</h1>');
 				}
 			});
-
 			// error handler
 			server.on("error", function(err) {
 				console.log("Error more information: ", err);
 				process.exit();
 			});
-
 			if (typeof hostname === "function") {
 				callback = hostname;
 			} else {
