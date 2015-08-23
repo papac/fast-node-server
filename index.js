@@ -65,21 +65,22 @@ module.exports = function Router() {
 	*/
 	var run = function(req, res, pathname) {
 		var method = req.method.toLowerCase();
-		var match = false;
+		var error = true;
 		pathname = pathname.substring(1).replace(/\//g, "\/");
 		methods[method].forEach(function(item) {
 			if (item.match(pathname)) {
+				error = false;
 				req.params = {};
-				match = pathname.match(/([\w\d_-]+)\/?/g);
+				match = pathname.match(/([\w\d-_]+)\/?/g);
 				Object.keys(match || []).forEach(function(item, index) {
+					req.params["id"] = undefined;
 					if (index > 1) {
-						req.params[item] = undefined;
 					}
 				});
 				return item.run(req, res);
 			}
 		});
-		return match;
+		return error;
 	};
 	/*
 	* Controlleur des routes
@@ -120,8 +121,7 @@ module.exports = function Router() {
 			* next middelware launcher
 			*/
 			var next = function() {
-				me._nexted = true; 
-				console.log("next");
+				me._nexted = true;
 			};
 			connection.on("start", function(req, res) {
 				if (typeof mount === "function") {
@@ -135,12 +135,12 @@ module.exports = function Router() {
 				/*
 				* coeur de la logique du middelware this.use
 				*/
-				if (!this._nextedInit) {
-					this._nextedInit = true;
-					this._nexted = false;
+				if (!me._nextedInit) {
+					me._nextedInit = true;
+					me._nexted = false;
 					middleware(req, res, next);
 				} else {
-					if (this._nexted) {
+					if (me._nexted) {
 						middleware(req, res, next);
 					}
 				}
@@ -182,6 +182,10 @@ module.exports = function Router() {
 			var http = require("http");
 			var server = http.createServer(function(req, res) {
 				/*
+				* information du reste de l'application du debut de serveur
+				*/
+				connection.emit("start", req, res);
+				/*
 				* Gestionnaire d'erreur sur la reponse.
 				*/
 				res.on("error", function(er) {
@@ -193,10 +197,6 @@ module.exports = function Router() {
 				*/
 				res.writeHead(200, header("text/html"));
 				var respone = new Response(res);
-				/*
-				* information du reste de l'application du debut de serveur
-				*/
-				connection.emit("start", req, respone);
 				/*
 				* Recuperation de la methode de transmission
 				* de la requete
@@ -213,12 +213,12 @@ module.exports = function Router() {
 				/*
 				* Comparation de la route courante dans ma collection de route.
 				*/
-				var isMath = run(req, respone, pathname);
+				var error = run(req, respone, pathname);
 
 				/*
 				* Verification de la validite du path
 				*/
-				if (!isMath) {
+				if (!error) {
 					res.end('<p style="font-size: 15px; font-family: verdana">Cannot ' + req.method + ' ' + pathname + '</p>')
 				}
 			});
