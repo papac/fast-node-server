@@ -1,10 +1,19 @@
+'use strict';
+
 var url = require("url");
 var querystring = require("querystring");
 var Response = require("./lib/response");
 var Route = require("./lib/route");
-var serveStatic = require("serve-static");
-var bobyParser = require("body-parser");
 var header = require("./lib/header");
+var serveFavicon = require("serve-favicon");
+var bodyParser = require("body-parser");
+/*
+* middelware externe
+*/
+var serveStatic = function() {
+
+};
+var bobyParser = require("body-parser");
 /**
 * Class request.
 *
@@ -15,9 +24,8 @@ var request = function (req, pathname) {
 	var method = req.method.toLowerCase();
 	if (method == "get") {
 		if (/(:([\w_-]+))+/g.test(pathname)) {
-			req.params = {
-
-			};
+			req.params = {};
+			req.params[RegExp.$1] = "";
 		}else {
 			req.query = querystring.parse(pathname);
 		}
@@ -58,10 +66,16 @@ module.exports = function Router() {
 	var run = function(req, res, pathname) {
 		var method = req.method.toLowerCase();
 		var match = false;
-		pathname = pathname.substring(1).replace("/", "\/");
+		pathname = pathname.substring(1).replace(/\//g, "\/");
 		methods[method].forEach(function(item) {
 			if (item.match(pathname)) {
-				match = true;
+				req.params = {};
+				match = pathname.match(/([\w\d_-]+)\/?/g);
+				Object.keys(match || []).forEach(function(item, index) {
+					if (index > 1) {
+						req.params[item] = undefined;
+					}
+				});
 				return item.run(req, res);
 			}
 		});
@@ -88,38 +102,38 @@ module.exports = function Router() {
 		*/
 		static: serveStatic,
 		/*
+		* Server de favicon
+		*/
+		favicon: serveFavicon,
+		/*
 		* mutateur des donnees de configuration
 		*/
 		set: function(name, value) {
 			config[name] = value;
 		},
 		/*
-		* Accesseur des donnees de la configuration
-		*/
-		get: function (name) {
-			if (! name in config) {
-				return null;
-			}
-			return config[name];
-		},
-		/*
-		* Gestion de plugin.
+		* Gestion de plugin | middelware.
 		*/
 		use: function (mount, middleware) {
+			var me = this;
+			/*
+			* next middelware launcher
+			*/
+			var next = function() {
+				me._nexted = true; 
+				console.log("next");
+			};
 			connection.on("start", function(req, res) {
-				var me = this;
-				/*
-				* next middelware launcher
-				*/
-				var next = function() {
-					me._nexted = true; 
-				};
 				if (typeof mount === "function") {
 					middleware = mount;
 					mount = '';
+				}else {
+					if (typeof middleware !== "function") {
+						throw new TypeError("La fonction use() prend en paramtre un middleware.");
+					}
 				}
 				/*
-				* coeur de this.use
+				* coeur de la logique du middelware this.use
 				*/
 				if (!this._nextedInit) {
 					this._nextedInit = true;
@@ -134,9 +148,23 @@ module.exports = function Router() {
 			return this;
 		},
 		/*
+		* Accesseur des donnees de la configuration
+		*
 		* Route get.
 		*/
 		get: function(path, callback) {
+
+			if (typeof callback === "undefined") {
+				if (typeof path === "string") {
+					if (! name in config) {
+						return null;
+					}
+					return config[name];
+				} else {
+					throw new TypeError("Cette fonction ne peut pas execute de callback.");
+				}
+			}
+
 			methods.get.push(new Route(path, callback));
 			return this;
 		},
@@ -154,10 +182,6 @@ module.exports = function Router() {
 			var http = require("http");
 			var server = http.createServer(function(req, res) {
 				/*
-				* information du reste de l'application du debut de serveur
-				*/
-				connection.emit("start", req, res);
-				/*
 				* Gestionnaire d'erreur sur la reponse.
 				*/
 				res.on("error", function(er) {
@@ -169,6 +193,10 @@ module.exports = function Router() {
 				*/
 				res.writeHead(200, header("text/html"));
 				var respone = new Response(res);
+				/*
+				* information du reste de l'application du debut de serveur
+				*/
+				connection.emit("start", req, respone);
 				/*
 				* Recuperation de la methode de transmission
 				* de la requete
