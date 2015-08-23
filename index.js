@@ -1,47 +1,26 @@
 'use strict';
-
+/*
+* Chargement des dependense.
+*/
 var url = require("url");
 var querystring = require("querystring");
 var Response = require("./lib/response");
 var Route = require("./lib/route");
 var header = require("./lib/header");
+/*
+* Les middlewares compatibles express
+* Alors tous les middleware de express sont donc compatible
+*/
 var serveFavicon = require("serve-favicon");
-var bodyParser = require("body-parser");
+var bobyParser = require("body-parser");
 /*
 * middelware externe
 */
-var serveStatic = function() {
-
-};
-var bobyParser = require("body-parser");
-/**
-* Class request.
-*
-* Permetant de reconstruire la requete.
-* 
-*/
-var request = function (req, pathname) {
-	var method = req.method.toLowerCase();
-	if (method == "get") {
-		if (/(:([\w_-]+))+/g.test(pathname)) {
-			req.params = {};
-			req.params[RegExp.$1] = "";
-		}else {
-			req.query = querystring.parse(pathname);
-		}
-	}
-	return req;
-};
-
-/*
-* Gestionnaire d'execption.
-*/
-var RouterException = {};
-RouterException.prototype = Error.prototype;
+var serveStatic = function() { };
 
 module.exports = function Router() {
 	/*
-	* Object de configuration
+	* Objet de configuration
 	*/
 	var config = {
 		engine: "ejs",
@@ -60,23 +39,40 @@ module.exports = function Router() {
 
 	var events = require("events").EventEmitter;
 	var connection = new events();
-	/*
+	/**
 	* lancement du serveur.
+	*
+	* @param {http.incommingMessage} req
+	* @param {http.ServerResponse} res
+	* @param {string} pathname
+	* @return {boolean}
+	*
+	* @private
 	*/
 	var run = function(req, res, pathname) {
+		// recuperationde la method de la requete entrante
 		var method = req.method.toLowerCase();
+		// Sequenceur
 		var error = true;
-		pathname = pathname.substring(1).replace(/\//g, "\/");
+		pathname = pathname.replace(/\//g, "\/");
+		/*
+		* Recherche dans la collection de path
+		* le path equivalant au pathname de http.incommmingMessage
+		*/
 		methods[method].forEach(function(item) {
 			if (item.match(pathname)) {
+				
 				error = false;
 				req.params = {};
-				match = pathname.match(/([\w\d-_]+)\/?/g);
+				var match = pathname.match(/([\w\d-_]+)\/?/g);
+				console.log(match, "well");
+
 				Object.keys(match || []).forEach(function(item, index) {
 					req.params["id"] = undefined;
 					if (index > 1) {
 					}
 				});
+
 				return item.run(req, res);
 			}
 		});
@@ -84,6 +80,8 @@ module.exports = function Router() {
 	};
 	/*
 	* Controlleur des routes
+	* 
+	* Object fast-node-server
 	*/
 	return {
 		/*
@@ -94,26 +92,44 @@ module.exports = function Router() {
 		next: function() {
 			this._nexted = true;
 		},
-		/*
+		/**
 		* Body-parse function
+		* 
+		* @public
 		*/
 		body: bobyParser,
-		/*
+		/**
 		* Server de fichier static
+		* 
+		* @public
 		*/
 		static: serveStatic,
-		/*
+		/**
 		* Server de favicon
+		* 
+		* @public
 		*/
 		favicon: serveFavicon,
-		/*
+		/**
 		* mutateur des donnees de configuration
+		*
+		* @param {string} name
+		* @param {string|object|function} value
+		* @return {object} objet fast-node-server
+		*
+		* @public
 		*/
 		set: function(name, value) {
 			config[name] = value;
 		},
-		/*
+		/**
 		* Gestion de plugin | middelware.
+		*
+		* @param {string} mount
+		* @param {function} middleware
+		* @return {object} objet fast-node-server
+		*
+		* @public
 		*/
 		use: function (mount, middleware) {
 			var me = this;
@@ -147,15 +163,21 @@ module.exports = function Router() {
 			});
 			return this;
 		},
-		/*
+		/**
 		* Accesseur des donnees de la configuration
 		*
 		* Route get.
+		* @param {string} path
+		* @param {function} callback
+		* @return {object} objet fast-node-server
+		*
+		* @public
 		*/
 		get: function(path, callback) {
 
 			if (typeof callback === "undefined") {
 				if (typeof path === "string") {
+					var name = path;
 					if (! name in config) {
 						return null;
 					}
@@ -168,8 +190,16 @@ module.exports = function Router() {
 			methods.get.push(new Route(path, callback));
 			return this;
 		},
-		/*
+		/**
 		* Route post.
+		* 
+		* controlleur de http.incommingMessage de type POST
+		* 
+		* @param {string} path
+		* @param {callback} callback
+		* @return {object} objet fast-node-server
+		*
+		* @public
 		*/
 		post: function(path, callback) {
 			methods.post.push(new Route(path, callback));
@@ -177,6 +207,15 @@ module.exports = function Router() {
 		},
 		/*
 		* Lanceur du serveur.
+		*
+		* mecanisme de lencement du server global
+		*
+		* @param {string|number} port
+		* @param {string} hostname|undefined
+		* @param {function} callback
+		* @return {object} objet fast-node-server
+		*
+		* @public
 		*/
 		listen: function(port, hostname, callback) {
 			var http = require("http");
@@ -187,6 +226,7 @@ module.exports = function Router() {
 				connection.emit("start", req, res);
 				/*
 				* Gestionnaire d'erreur sur la reponse.
+				* En case d'ecriture apres envoye de la reponse
 				*/
 				res.on("error", function(er) {
 					console.log(er);
@@ -199,17 +239,13 @@ module.exports = function Router() {
 				var respone = new Response(res);
 				/*
 				* Recuperation de la methode de transmission
-				* de la requete
+				* de la requete.
 				*/
 				var method = methods[req.method.toLowerCase()];
 				/*
 				* Recuperation du path de la requete
 				*/
 				var pathname = url.parse(req.url).pathname;
-				/*
-				* Lancement du control de path
-				*/
-				var exist = false;
 				/*
 				* Comparation de la route courante dans ma collection de route.
 				*/
@@ -238,7 +274,7 @@ module.exports = function Router() {
 				}
 			}
 			/*
-			* Launcher
+			* Launch
 			*/
 			server.listen(parseInt(port, 10), hostname, callback);
 		}
