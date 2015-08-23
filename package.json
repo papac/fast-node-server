@@ -11,20 +11,23 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/papac/node-http-server.git"
+    "url": "git+ssh://git@github.com/papac/fast-node-server.git"
   },
   "keywords": [
     "\"Server\"",
+    "\"fast-node-server\"",
     "\"http\"",
-    "\"node-http-server\"",
+    "\"node-server\"",
+    "\"server\"",
+    "\"http-server\"",
     "\"express\""
   ],
   "author": "Franck Dakia",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/papac/node-http-server/issues"
+    "url": "https://github.com/papac/fast-node-server/issues"
   },
-  "homepage": "https://github.com/papac/node-http-server#readme",
+  "homepage": "https://github.com/papac/fast-node-server#readme",
   "devDependencies": {
     "serve-favicon": "^2.3.0",
     "body-parser": "^1.13.3",
