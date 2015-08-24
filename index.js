@@ -23,7 +23,7 @@ module.exports = function Router() {
 	* Objet de configuration
 	*/
 	var config = {
-		engine: "ejs",
+		engine: undefined,
 		views: undefined,
 		title: undefined
 	};
@@ -47,32 +47,37 @@ module.exports = function Router() {
 	* @param {string} pathname
 	* @return {boolean}
 	*
-	* @private
+	* @api private
 	*/
 	var run = function(req, res, pathname) {
 		// recuperationde la method de la requete entrante
 		var method = req.method.toLowerCase();
 		// Sequenceur
 		var error = true;
+		var indexes = pathname.split("/");
+
+		if (indexes[indexes.length - 1] == "") {
+			indexes.pop();
+			pathname = indexes.join("/");
+		}
+		indexes.shift();
+		indexes.shift();
 		pathname = pathname.replace(/\//g, "\/");
+
+		if (pathname == "") {
+			pathname = "/";
+		}
 		/*
 		* Recherche dans la collection de path
 		* le path equivalant au pathname de http.incommmingMessage
 		*/
 		methods[method].forEach(function(item) {
 			if (item.match(pathname)) {
-				
 				error = false;
 				req.params = {};
-				var match = pathname.match(/([\w\d-_]+)\/?/g);
-				console.log(match, "well");
-
-				Object.keys(match || []).forEach(function(item, index) {
-					req.params["id"] = undefined;
-					if (index > 1) {
-					}
+				Object.keys(indexes || []).forEach(function(index) {
+					req.params[item.paramsKeys[index].substring(1)] = indexes[index];
 				});
-
 				return item.run(req, res);
 			}
 		});
@@ -95,19 +100,19 @@ module.exports = function Router() {
 		/**
 		* Body-parse function
 		* 
-		* @public
+		* @api public
 		*/
 		body: bobyParser,
 		/**
 		* Server de fichier static
 		* 
-		* @public
+		* @api public
 		*/
 		static: serveStatic,
 		/**
 		* Server de favicon
 		* 
-		* @public
+		* @api public
 		*/
 		favicon: serveFavicon,
 		/**
@@ -117,7 +122,7 @@ module.exports = function Router() {
 		* @param {string|object|function} value
 		* @return {object} objet fast-node-server
 		*
-		* @public
+		* @api public
 		*/
 		set: function(name, value) {
 			config[name] = value;
@@ -129,14 +134,14 @@ module.exports = function Router() {
 		* @param {function} middleware
 		* @return {object} objet fast-node-server
 		*
-		* @public
+		* @api public
 		*/
 		use: function (mount, middleware) {
 			var me = this;
 			/*
 			* next middelware launcher
 			*/
-			var next = function() {
+			var next = function(err) {
 				me._nexted = true;
 			};
 			connection.on("start", function(req, res) {
@@ -145,7 +150,7 @@ module.exports = function Router() {
 					mount = '';
 				}else {
 					if (typeof middleware !== "function") {
-						throw new TypeError("La fonction use() prend en paramtre un middleware.");
+						throw new TypeError("La fonction .use() prend en paramtre un middleware.");
 					}
 				}
 				/*
@@ -157,6 +162,7 @@ module.exports = function Router() {
 					middleware(req, res, next);
 				} else {
 					if (me._nexted) {
+						me._nexted = false;
 						middleware(req, res, next);
 					}
 				}
@@ -171,14 +177,14 @@ module.exports = function Router() {
 		* @param {function} callback
 		* @return {object} objet fast-node-server
 		*
-		* @public
+		* @api public
 		*/
 		get: function(path, callback) {
 
 			if (typeof callback === "undefined") {
 				if (typeof path === "string") {
 					var name = path;
-					if (! name in config) {
+					if (!(name in config)) {
 						return null;
 					}
 					return config[name];
@@ -199,7 +205,7 @@ module.exports = function Router() {
 		* @param {callback} callback
 		* @return {object} objet fast-node-server
 		*
-		* @public
+		* @api public
 		*/
 		post: function(path, callback) {
 			methods.post.push(new Route(path, callback));
@@ -215,28 +221,28 @@ module.exports = function Router() {
 		* @param {function} callback
 		* @return {object} objet fast-node-server
 		*
-		* @public
+		* @api public
 		*/
 		listen: function(port, hostname, callback) {
 			var http = require("http");
 			var server = http.createServer(function(req, res) {
 				/*
+				* default header.
+				*/
+				var response = new Response(res);
+				response.writeHead(200, header("text/html", "200 OK"));
+				/*
 				* information du reste de l'application du debut de serveur
 				*/
-				connection.emit("start", req, res);
+				connection.emit("start", req, response);
 				/*
 				* Gestionnaire d'erreur sur la reponse.
 				* En case d'ecriture apres envoye de la reponse
 				*/
-				res.on("error", function(er) {
-					console.log(er);
+				res.on("error", function(err) {
+					console.log(err);
 					return;
 				});
-				/*
-				* default header.
-				*/
-				res.writeHead(200, header("text/html"));
-				var respone = new Response(res);
 				/*
 				* Recuperation de la methode de transmission
 				* de la requete.
@@ -249,13 +255,15 @@ module.exports = function Router() {
 				/*
 				* Comparation de la route courante dans ma collection de route.
 				*/
-				var error = run(req, respone, pathname);
+				console.log(response);
+				var error = run(req, response, pathname);
 
 				/*
 				* Verification de la validite du path
 				*/
-				if (!error) {
-					res.end('<p style="font-size: 15px; font-family: verdana">Cannot ' + req.method + ' ' + pathname + '</p>')
+				if (error) {
+					response.writeHead(404, header("text/html", "Not Found"));
+					response.send('<p style="font-size: 15px; font-family: verdana">Cannot ' + req.method + ' ' + pathname + '</p>')
 				}
 			});
 			/*
