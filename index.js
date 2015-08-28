@@ -85,7 +85,7 @@ module.exports = function Router() {
 	};
 	/*
 	* Controlleur des routes
-	* 
+	*
 	* Object fast-node-server
 	*/
 	return {
@@ -99,19 +99,19 @@ module.exports = function Router() {
 		},
 		/**
 		* Body-parse function
-		* 
+		*
 		* @api public
 		*/
 		body: bobyParser,
 		/**
 		* Server de fichier static
-		* 
+		*
 		* @api public
 		*/
 		static: serveStatic,
 		/**
 		* Server de favicon
-		* 
+		*
 		* @api public
 		*/
 		favicon: serveFavicon,
@@ -198,9 +198,9 @@ module.exports = function Router() {
 		},
 		/**
 		* Route post.
-		* 
+		*
 		* controlleur de http.incommingMessage de type POST
-		* 
+		*
 		* @param {string} path
 		* @param {callback} callback
 		* @return {object} objet fast-node-server
