@@ -15,7 +15,8 @@
   },
   "keywords": [
     "express",
-    "node-server",
+    "small",
+		"server",
     "http"
   ],
   "author": "Franck Dakia",
@@ -25,7 +26,8 @@
   },
   "homepage": "https://github.com/papac/fast-node-server#readme",
   "devDependencies": {
-    "mime": "^1.3.4"
   },
-  "dependencies": {}
+  "dependencies": {
+    "mime": "^1.3.4"	
+	}
 }
