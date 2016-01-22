@@ -1,41 +1,31 @@
 {
   "name": "fast-node-server",
-  "version": "0.0.2",
+  "version": "0.1.1",
   "description": "Very minimalyste web framework",
   "main": "index.js",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "test": "node test/app.js"
+    "test": "node test/index.js"
   },
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/papac/fast-node-server.git"
   },
   "keywords": [
-    "\"Server\"",
-    "\"fast-node-server\"",
-    "\"http\"",
-    "\"node-server\"",
-    "\"server\"",
-    "\"http-server\"",
-    "\"express\""
+    "express",
+    "node-server",
+    "http"
   ],
   "author": "Franck Dakia",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/papac/fast-node-server/issues"
   },
   "homepage": "https://github.com/papac/fast-node-server#readme",
   "devDependencies": {
-    "serve-favicon": "^2.3.0",
-    "body-parser": "^1.13.3",
-    "serve-static": "^1.10.0"
   },
   "dependencies": {
-    "body-parser": "^1.13.3",
-    "serve-favicon": "^2.3.0",
-    "serve-static": "^1.10.0"
   }
 }

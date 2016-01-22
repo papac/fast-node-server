@@ -1,290 +1,325 @@
+/*!
+ * small-server
+ * Copyright(c) 2014-2015 Franck Dakia
+ * MIT Licensed
+ */
+ 
 'use strict';
-/*
-* Chargement des dependense.
-*/
+
 var url = require("url");
+var path = require("path");
+var mime = require("mime");
 var querystring = require("querystring");
 var Response = require("./lib/response");
 var Route = require("./lib/route");
 var header = require("./lib/header");
-/*
-* Les middlewares compatibles express
-* Alors tous les middleware de express sont donc compatible
+var EventEmitter = require("events").EventEmitter;
+
+
+// FastNodeServer Class
+function FastNodeServer() {
+	this._config = { engine: undefined, views: undefined, title: undefined };
+	this._method = { get: [], post: [], put: [], update: [], delete: [], head: [] };
+	this._nextedInit = true;
+	this._nexted = false;
+	this._middleware = [];
+	EventEmitter.call(this);
+};
+
+FastNodeServer.prototype = EventEmitter.prototype;
+FastNodeServer.prototype.constructor = FastNodeServer;
+
+/**
+* Accesseur des donnees de la configuration
+*
+* Route get.
+* @param {string} path
+* @param {function} callback
+* @return {object} objet fast-node-server
+*
+* @api public
 */
-var serveFavicon = require("serve-favicon");
-var bobyParser = require("body-parser");
-/*
-* middelware externe
+
+FastNodeServer.prototype.get = function(path, callback) {
+	if (typeof callback === "undefined") {
+		if (typeof path === "string") {
+			var name = path;
+			if (!(name in this._config)) {
+				return null;
+			}
+			return this._config[name];
+		} else {
+			throw new TypeError("Cette fonction ne peut pas execute de callback.");
+		}
+	} else {
+		this._method.get.push(new Route(path, callback));
+	}
+	return this;
+};
+
+/**
+* Route post.
+*
+* controlleur de http.incommingMessage de type POST
+*
+* @param {string} path
+* @param {callback} callback
+* @return {object} objet fast-node-server
+*
+* @api public
 */
-var serveStatic = function() { };
+FastNodeServer.prototype.post = function(path, callback) {
+	this._method.post.push(new Route(path, callback));
+	return this;
+}
 
-module.exports = function Router() {
-	/*
-	* Objet de configuration
-	*/
-	var config = {
-		engine: undefined,
-		views: undefined,
-		title: undefined
-	};
-	'use strict';
-	/*
-	* Objet de collection des differents method
-	* http en occurence GET, POST
-	*/
-	var methods = {
-		get: [],
-		post: []
-	};
+/**
+* Route post.
+*
+* controlleur de http.incommingMessage de type POST
+*
+* @param {string} path
+* @param {callback} callback
+* @return {object} objet fast-node-server
+*
+* @api public
+*/
+FastNodeServer.prototype.head = function(path, callback) {
+	this._method.head.push(new Route(path, callback));
+	return this;
+}
 
-	var events = require("events").EventEmitter;
-	var connection = new events();
-	/**
-	* lancement du serveur.
-	*
-	* @param {http.incommingMessage} req
-	* @param {http.ServerResponse} res
-	* @param {string} pathname
-	* @return {boolean}
-	*
-	* @api private
-	*/
-	var run = function(req, res, pathname) {
-		// recuperationde la method de la requete entrante
-		var method = req.method.toLowerCase();
-		// Sequenceur
-		var error = true;
-		var indexes = pathname.split("/");
+/**
+* Route PUT.
+*
+* controlleur de http.incommingMessage de type PUT
+*
+* @param {string} path
+* @param {callback} callback
+* @return {object} objet fast-node-server
+*
+* @api public
+*/
+FastNodeServer.prototype.put = function(path, callback) {
+	this._method.put.push(new Route(path, callback));
+	return this;
+}
 
-		if (indexes[indexes.length - 1] == "") {
-			indexes.pop();
-			pathname = indexes.join("/");
+/**
+* Route DELETE.
+*
+* controlleur de http.incommingMessage de type DELETE
+*
+* @param {string} path
+* @param {callback} callback
+* @return {object} objet fast-node-server
+*
+* @api public
+*/
+FastNodeServer.prototype.delete = function(path, callback) {
+	this._method.delete.push(new Route(path, callback));
+	return this;
+}
+
+/**
+* Route UPDATE.
+*
+* controlleur de http.incommingMessage de type UPDATE
+*
+* @param {string} path
+* @param {callback} callback
+* @return {object} objet fast-node-server
+*
+* @api public
+*/
+FastNodeServer.prototype.update = function(path, callback) {
+	this._method.update.push(new Route(path, callback));
+	return this;
+}
+
+// Set
+FastNodeServer.prototype.set = function(name, value) {
+	this._config[name] = value;
+};
+
+// use
+FastNodeServer.prototype.use = function (middleware) {
+	this._middleware.push(middleware);
+	return this;
+};
+
+/**
+* lancement du serveur.
+*
+* @param {http.incommingMessage} req
+* @param {http.ServerResponse} res
+* @param {string} pathname
+* @return {boolean}
+*
+* @api private
+*/
+function run(req, res, methods, cb) {
+	if (req.url == "/favicon.ico") {
+		return false;
+	}
+	// * recuperationde la method de la requete entrante
+	var method = req.method.toLowerCase();
+	var pathname = url.parse(req.url).pathname;
+
+	// * Sequenceur
+	var error = true;
+	var parts = pathname.split("/");
+
+	// * verification
+	if (parts[parts.length - 1] == "") {
+		parts.pop();
+		pathname = parts.join("/");
+	}
+
+	// * remove surcharge
+	parts.shift();
+	pathname = pathname.replace(/\//g, "\/");
+
+	if (pathname == "") {
+		pathname = "/";
+	}
+	var i = 0;
+	var len = methods[method].length;
+	var route = {};
+	// * Recherche dans la collection de path
+	// * le path equivalant au pathname de http.incommmingMessage
+	if (len > 0) {
+		for (; i < len; i++) {
+			(function(i) {
+				route = methods[method][i];
+				if (route.match(pathname)) {
+					error = false;
+					req.params = {};
+					var params = route.params();
+					if (params !== null) {
+						Object.keys(parts || []).forEach(function(index) {
+							req.params[params[index].substring(1)] = parts[index];
+						});
+					}
+					if (method === "post" || method === "put") {
+						var data = "";
+						req.on("data", function(chunck) {
+							data += chunck;
+						});
+						req.on("end", function() {
+							req.body = querystring.parse(data.toString());
+							route.exec(req, res);
+						});
+					} else {
+						route.exec(req, res);
+					}
+				}
+			})(i);
 		}
-		indexes.shift();
-		indexes.shift();
-		pathname = pathname.replace(/\//g, "\/");
+	} else {
+		res.setHeader("Content-Type", "Not Found");
+		res.status(404);
+		res.end();
+	}
 
-		if (pathname == "") {
-			pathname = "/";
+	return error;
+};
+
+/*
+* Lanceur du serveur.
+*
+* mecanisme de lencement du server global
+*
+* @param {string|number} port
+* @param {string} hostname|undefined
+* @param {function} callback
+* @return {object} objet fast-node-server
+*
+* @api public
+*/
+FastNodeServer.prototype.listen = function(port, hostname, callback) {
+	
+	var http = require("http");
+	var next = function (err) { this._nexted = true; return err; }.bind(this);
+
+	var server = http.createServer(function(req, res) {
+		// * default header.
+		var response = new Response(res, this._config);
+		response.on("writted", function(data, code, type) {
+			response.writeHead(code, {"Content-Type": type});
+			response.end(data);
+		});
+		this.on("next", function () {
+			run(req, response, this._method);
+		});
+		var i = 0, len = this._middleware.length;
+		if (len == 0) {
+			this.emit("next");
+		} else {
+			for (; i < len; i++) {
+				if (this._nextedInit) {
+					this._nextedInit = false;
+					this._middleware[i](req, response, next);
+				} else {
+					if (this._nexted) {
+						this._nexted = false;
+						this._middleware[i](req, response, next);
+					}
+				}
+				if (len == (i + 1)) {
+					this.emit("next");
+				}
+			}
 		}
-		/*
-		* Recherche dans la collection de path
-		* le path equivalant au pathname de http.incommmingMessage
-		*/
-		methods[method].forEach(function(item) {
-			if (item.match(pathname)) {
-				error = false;
-				req.params = {};
-				Object.keys(indexes || []).forEach(function(index) {
-					req.params[item.paramsKeys[index].substring(1)] = indexes[index];
-				});
-				return item.run(req, res);
+	}.bind(this));
+
+	if (typeof hostname === "function") {
+		callback = hostname;
+		hostname = "localhost";
+	} else {
+		if (typeof hostname === "undefined") {
+			hostname = "localhost";
+		}
+	}
+
+	// * Error handler.
+	server.on("error", callback);
+
+	// * Launch
+	server.listen(parseInt(port, 10), hostname, callback);
+};
+
+// * FastNodeServer wrapper.
+function fast() {
+	return new FastNodeServer();
+}
+
+// ServeStatic
+function serveStatic(publicPath) {
+	var fs = require("fs");
+	return function (req, res, next) {
+		var pathname = publicPath + url.parse(req.url).pathname;
+		fs.stat(pathname, function (err, stat) {
+			if (err == null) {
+				if (stat.isFile()) {
+					var mimeType = mime.lookup(pathname);
+					var data = fs.readFileSync(pathname);
+					res.setHeader("Content-Type", mimeType);
+					console.log(data.toString());
+					res.send(data);
+					next();
+				}
+			} else {
+				next();
 			}
 		});
-		return error;
 	};
-	/*
-	* Controlleur des routes
-	*
-	* Object fast-node-server
-	*/
-	return {
-		/*
-		* sequenseur de midelware.
-		*/
-		_nextedInit: false,
-		_nexted: false,
-		next: function() {
-			this._nexted = true;
-		},
-		/**
-		* Body-parse function
-		*
-		* @api public
-		*/
-		body: bobyParser,
-		/**
-		* Server de fichier static
-		*
-		* @api public
-		*/
-		static: serveStatic,
-		/**
-		* Server de favicon
-		*
-		* @api public
-		*/
-		favicon: serveFavicon,
-		/**
-		* mutateur des donnees de configuration
-		*
-		* @param {string} name
-		* @param {string|object|function} value
-		* @return {object} objet fast-node-server
-		*
-		* @api public
-		*/
-		set: function(name, value) {
-			config[name] = value;
-		},
-		/**
-		* Gestion de plugin | middelware.
-		*
-		* @param {string} mount
-		* @param {function} middleware
-		* @return {object} objet fast-node-server
-		*
-		* @api public
-		*/
-		use: function (mount, middleware) {
-			var me = this;
-			/*
-			* next middelware launcher
-			*/
-			var next = function(err) {
-				me._nexted = true;
-			};
-			connection.on("start", function(req, res) {
-				if (typeof mount === "function") {
-					middleware = mount;
-					mount = '';
-				}else {
-					if (typeof middleware !== "function") {
-						throw new TypeError("La fonction .use() prend en paramtre un middleware.");
-					}
-				}
-				/*
-				* coeur de la logique du middelware this.use
-				*/
-				if (!me._nextedInit) {
-					me._nextedInit = true;
-					me._nexted = false;
-					middleware(req, res, next);
-				} else {
-					if (me._nexted) {
-						me._nexted = false;
-						middleware(req, res, next);
-					}
-				}
-			});
-			return this;
-		},
-		/**
-		* Accesseur des donnees de la configuration
-		*
-		* Route get.
-		* @param {string} path
-		* @param {function} callback
-		* @return {object} objet fast-node-server
-		*
-		* @api public
-		*/
-		get: function(path, callback) {
+} 
 
-			if (typeof callback === "undefined") {
-				if (typeof path === "string") {
-					var name = path;
-					if (!(name in config)) {
-						return null;
-					}
-					return config[name];
-				} else {
-					throw new TypeError("Cette fonction ne peut pas execute de callback.");
-				}
-			}
+// FastNodeServer
+module.exports = fast;
 
-			methods.get.push(new Route(path, callback));
-			return this;
-		},
-		/**
-		* Route post.
-		*
-		* controlleur de http.incommingMessage de type POST
-		*
-		* @param {string} path
-		* @param {callback} callback
-		* @return {object} objet fast-node-server
-		*
-		* @api public
-		*/
-		post: function(path, callback) {
-			methods.post.push(new Route(path, callback));
-			return this;
-		},
-		/*
-		* Lanceur du serveur.
-		*
-		* mecanisme de lencement du server global
-		*
-		* @param {string|number} port
-		* @param {string} hostname|undefined
-		* @param {function} callback
-		* @return {object} objet fast-node-server
-		*
-		* @api public
-		*/
-		listen: function(port, hostname, callback) {
-			var http = require("http");
-			var server = http.createServer(function(req, res) {
-				/*
-				* default header.
-				*/
-				var response = new Response(res);
-				response.writeHead(200, header("text/html", "200 OK"));
-				/*
-				* information du reste de l'application du debut de serveur
-				*/
-				connection.emit("start", req, response);
-				/*
-				* Gestionnaire d'erreur sur la reponse.
-				* En case d'ecriture apres envoye de la reponse
-				*/
-				res.on("error", function(err) {
-					console.log(err);
-					return;
-				});
-				/*
-				* Recuperation de la methode de transmission
-				* de la requete.
-				*/
-				var method = methods[req.method.toLowerCase()];
-				/*
-				* Recuperation du path de la requete
-				*/
-				var pathname = url.parse(req.url).pathname;
-				/*
-				* Comparation de la route courante dans ma collection de route.
-				*/
-				console.log(response);
-				var error = run(req, response, pathname);
-
-				/*
-				* Verification de la validite du path
-				*/
-				if (error) {
-					response.writeHead(404, header("text/html", "Not Found"));
-					response.send('<p style="font-size: 15px; font-family: verdana">Cannot ' + req.method + ' ' + pathname + '</p>')
-				}
-			});
-			/*
-			* Error handler.
-			*/
-			server.on("error", function(err) {
-				console.log("[Error: more information]: ", err);
-				process.exit();
-			});
-			if (typeof hostname === "function") {
-				callback = hostname;
-			} else {
-				hostname = "localhost";
-				if (typeof callback !== "undefined") {
-					callback = function(){};
-				}
-			}
-			/*
-			* Launch
-			*/
-			server.listen(parseInt(port, 10), hostname, callback);
-		}
-	};
+// Exports serveStatic
+module.exports.static = function(publicPath){
+	return serveStatic(publicPath);
 };
