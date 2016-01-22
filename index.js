@@ -165,23 +165,30 @@ function run(req, res, methods, cb) {
 	// * recuperationde la method de la requete entrante
 	var method = req.method.toLowerCase();
 	var pathname = url.parse(req.url).pathname;
-
 	// * Sequenceur
-	var error = true;
 	var parts = pathname.split("/");
-
 	// * verification
 	if (parts[parts.length - 1] == "") {
 		parts.pop();
 		pathname = parts.join("/");
 	}
-
 	// * remove surcharge
 	parts.shift();
 	pathname = pathname.replace(/\//g, "\/");
-
+	// pathname is valided.
 	if (pathname == "") {
 		pathname = "/";
+	}
+	req.body = {};
+	req.params = {};
+	// * Formatage des donnees du post.
+	if (method === "post" || method === "put") {
+		req.on("readable", function(chunck) {
+			req.body = querystring.parse(req.read().toString());
+			if (typeof req.body.method !== "function") {
+				method = req.body.method.toLowerCase();
+			}
+		});
 	}
 	var i = 0;
 	var len = methods[method].length;
@@ -189,40 +196,22 @@ function run(req, res, methods, cb) {
 	// * Recherche dans la collection de path
 	// * le path equivalant au pathname de http.incommmingMessage
 	if (len > 0) {
-		for (; i < len; i++) {
-			(function(i) {
-				route = methods[method][i];
-				if (route.match(pathname)) {
-					error = false;
-					req.params = {};
-					var params = route.params();
-					if (params !== null) {
-						Object.keys(parts || []).forEach(function(index) {
-							req.params[params[index].substring(1)] = parts[index];
-						});
-					}
-					if (method === "post" || method === "put") {
-						var data = "";
-						req.on("data", function(chunck) {
-							data += chunck;
-						});
-						req.on("end", function() {
-							req.body = querystring.parse(data.toString());
-							route.exec(req, res);
-						});
-					} else {
-						route.exec(req, res);
-					}
+		methods[method].forEach(function (route) {
+			if (route.match(pathname)) {
+				var params = route.params();
+				if (params !== null) {
+					Object.keys(parts || []).forEach(function(index) {
+						req.params[params[index].substring(1)] = parts[index];
+					});
 				}
-			})(i);
-		}
+				route.exec(req, res);
+			}
+		});
 	} else {
 		res.setHeader("Content-Type", "Not Found");
 		res.status(404);
 		res.end();
 	}
-
-	return error;
 };
 
 /*
@@ -243,7 +232,6 @@ FastNodeServer.prototype.listen = function(port, hostname, callback) {
 	var next = function (err) { this._nexted = true; return err; }.bind(this);
 
 	var server = http.createServer(function(req, res) {
-		// * default header.
 		var response = new Response(res, this._config);
 		response.on("writted", function(data, code, type) {
 			response.writeHead(code, {"Content-Type": type});
@@ -252,24 +240,24 @@ FastNodeServer.prototype.listen = function(port, hostname, callback) {
 		this.on("next", function () {
 			run(req, response, this._method);
 		});
-		var i = 0, len = this._middleware.length;
+		var len = this._middleware.length;
 		if (len == 0) {
 			this.emit("next");
 		} else {
-			for (; i < len; i++) {
+			this._middleware.forEach(function(middleware, i) {
 				if (this._nextedInit) {
 					this._nextedInit = false;
-					this._middleware[i](req, response, next);
+					middleware(req, response, next);
 				} else {
 					if (this._nexted) {
 						this._nexted = false;
-						this._middleware[i](req, response, next);
+						middleware(req, response, next);
 					}
 				}
 				if (len == (i + 1)) {
 					this.emit("next");
 				}
-			}
+			}.bind(this));
 		}
 	}.bind(this));
 
@@ -304,17 +292,14 @@ function serveStatic(publicPath) {
 				if (stat.isFile()) {
 					var mimeType = mime.lookup(pathname);
 					var data = fs.readFileSync(pathname);
-					res.setHeader("Content-Type", mimeType);
-					console.log(data.toString());
+					res.type(mimeType);
 					res.send(data);
-					next();
 				}
-			} else {
-				next();
 			}
+			next();
 		});
 	};
-} 
+}
 
 // FastNodeServer
 module.exports = fast;
