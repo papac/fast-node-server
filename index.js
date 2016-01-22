@@ -196,7 +196,8 @@ function run(req, res, methods, cb) {
 	// * Recherche dans la collection de path
 	// * le path equivalant au pathname de http.incommmingMessage
 	if (len > 0) {
-		methods[method].forEach(function (route) {
+		var is = false;
+		methods[method].forEach(function (route, i) {
 			if (route.match(pathname)) {
 				var params = route.params();
 				if (params !== null) {
@@ -204,7 +205,13 @@ function run(req, res, methods, cb) {
 						req.params[params[index].substring(1)] = parts[index];
 					});
 				}
-				route.exec(req, res);
+				is = route.exec(req, res);
+			}
+			if (len == (i+1)) {
+				if (!is) {
+					res.writeHead(404, {"Content-Type": "text/html"});
+					res.end("Cannot " + method.toUpperCase() + " " + req.url);
+				}
 			}
 		});
 	} else {
