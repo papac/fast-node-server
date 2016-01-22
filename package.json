@@ -1,6 +1,6 @@
 {
   "name": "small-express",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Very minimalyste web framework",
   "main": "index.js",
   "directories": {
@@ -16,7 +16,7 @@
   "keywords": [
     "express",
     "small",
-		"server",
+    "server",
     "http"
   ],
   "author": "Franck Dakia",
@@ -25,9 +25,8 @@
     "url": "https://github.com/papac/fast-node-server/issues"
   },
   "homepage": "https://github.com/papac/fast-node-server#readme",
-  "devDependencies": {
-  },
+  "devDependencies": {},
   "dependencies": {
-    "mime": "^1.3.4"	
-	}
+    "mime": "^1.3.4"
+  }
 }
